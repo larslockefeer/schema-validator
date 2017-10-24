@@ -1,0 +1,72 @@
+#!/usr/bin/env ruby
+
+require 'json'
+require 'optparse'
+require 'ostruct'
+require_relative '../lib/rx/ruby/Rx.rb'
+
+options = OpenStruct.new
+OptionParser.new do |opt|
+  opt.on('-s', '--schema SCHEMA', 'The schema to validate against') { |o| options.schema = o }
+  opt.on('-f', '--file FILE', 'The file to validate') { |o| options.validatable = o }
+  opt.on('-m', '--meta-schemata META_SCHEMATA', 'A file containing meta schema definition') { |o| options.meta_schemata = o }
+end.parse!
+
+unless options.schema && options.validatable
+  puts "Please provide a schema and a file to validate."
+  puts "Run me with the -h flag to see usage instructions."
+  exit
+end
+
+if options.meta_schemata
+  meta_schemata_file = File.open(options.meta_schemata).read
+  meta_schemata = JSON.parse(meta_schemata_file)
+else
+  meta_schemata = []
+end
+
+schema_file = File.open(options.schema).read
+schema = JSON.parse(schema_file)
+
+file = File.open(options.validatable).read
+json = JSON.parse(file)
+
+rx = Rx.new({ :load_core => true })
+
+# Step 1: Learn the meta schemata
+unless meta_schemata.empty?
+  puts "Learning meta schemata"
+end
+meta_schemata.each do |meta_schema|
+  begin
+    rx.learn_type(meta_schema['uri'], meta_schema['schema'])
+    puts "  ✅  Learned meta scheme #{meta_schema['uri']}"
+  rescue Exception => e
+    puts "  ❌  An error occured learning meta scheme #{meta_schema['uri']}"
+    puts "      #{e.message}"
+    exit
+  end
+end
+
+# Step 2: Load the schema that we are going to validate against
+puts "Loading schema to validate against"
+begin
+  schema = rx.make_schema(schema)
+  puts "  ✅  Schema loaded successfully"
+rescue Exception => e
+  puts "  ❌  An error occured loading the schema"
+  puts "      #{e.message}"
+  exit
+end
+
+# Step 3: Validate our file against the schema
+puts "Validating"
+if schema then
+  begin  
+    schema.check!(json)
+    puts "  ✅  File is according to schema."
+  rescue Exception => e
+    puts "  ❌  An error occured validating the file against the schema"
+    puts "      #{e.message}"
+  end
+end

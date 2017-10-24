@@ -1,0 +1,6 @@
+[submodule "rx"]
+	path = rx
+	url = https://github.com/rjbs/rx
+[submodule "lib/rx"]
+	path = lib/rx
+	url = https://github.com/rjbs/rx
