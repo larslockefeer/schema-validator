@@ -4,12 +4,22 @@ require 'json'
 require 'optparse'
 require 'ostruct'
 require_relative '../lib/rx/ruby/Rx.rb'
+require 'yaml'
+
+# A utility to parse JSON or YAML
+def parse_json_or_yaml(file)
+  begin
+    JSON.parse(file)
+  rescue Exception => e
+    YAML.load(file)
+  end
+end
 
 options = OpenStruct.new
 OptionParser.new do |opt|
-  opt.on('-s', '--schema SCHEMA', 'The schema to validate against') { |o| options.schema = o }
-  opt.on('-f', '--file FILE', 'The file to validate') { |o| options.validatable = o }
-  opt.on('-m', '--meta-schemata META_SCHEMATA', 'A file containing meta schema definition') { |o| options.meta_schemata = o }
+  opt.on('-s', '--schema SCHEMA', 'The schema to validate against.') { |o| options.schema = o }
+  opt.on('-f', '--file FILE', 'The file to validate.') { |o| options.validatable = o }
+  opt.on('-m', '--meta-schemata META_SCHEMATA', 'A file containing meta schema definitions.') { |o| options.meta_schemata = o }
 end.parse!
 
 unless options.schema && options.validatable
@@ -20,16 +30,16 @@ end
 
 if options.meta_schemata
   meta_schemata_file = File.open(options.meta_schemata).read
-  meta_schemata = JSON.parse(meta_schemata_file)
+  meta_schemata = parse_json_or_yaml(meta_schemata_file)
 else
   meta_schemata = []
 end
 
 schema_file = File.open(options.schema).read
-schema = JSON.parse(schema_file)
+schema = parse_json_or_yaml(schema_file)
 
 file = File.open(options.validatable).read
-json = JSON.parse(file)
+validatable = parse_json_or_yaml(file)
 
 rx = Rx.new({ :load_core => true })
 
@@ -63,7 +73,7 @@ end
 puts "Validating"
 if schema then
   begin  
-    schema.check!(json)
+    schema.check!(validatable)
     puts "  ✅  File is according to schema."
   rescue Exception => e
     puts "  ❌  An error occured validating the file against the schema"
