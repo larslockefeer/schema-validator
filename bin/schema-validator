@@ -47,7 +47,7 @@ rx = Rx.new({ :load_core => true })
 unless meta_schemata.empty?
   puts "Learning meta schemata"
 end
-# ensure meta_schemata is an array
+
 meta_schemata = [meta_schemata] unless meta_schemata.kind_of?(Array)
 meta_schemata.each do |meta_schema|
   begin
